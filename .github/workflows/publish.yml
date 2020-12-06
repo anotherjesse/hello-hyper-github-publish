@@ -29,6 +29,6 @@ jobs:
       - name: install app deps
         run: npm i
       - name: compile app
-        run: 
+        run: npm run build
       - name: Run Publisher
         run: npx hyperdrive-publisher sync ${{ secrets.PUBLISHER_KEY }} public/
