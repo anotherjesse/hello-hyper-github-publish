@@ -49,7 +49,7 @@ Back on my local system, I see that my new hyperdrive has been peered!
 
 At this point the hyperdrive should be accessible (from Beaker or other hyper clients) but will be empty except for an `index.json` file.
 
-NOTE: you need to save the `seed`!
+NOTE: you need to save the `seed` and keep it private.  Anyone with the seed can publish to the hyperdrive!
 
 ## Step 2: publishing to hyperdrive via github actions
 
