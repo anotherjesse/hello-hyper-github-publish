@@ -1,105 +1,78 @@
-*Looking for a shareable component template? Go here --> [sveltejs/component-template](https://github.com/sveltejs/component-template)*
+# Svelte: Github commit -> published to hyperdrive
 
----
+This is a simple proof of concept of publishing a compiled svelte app to a hyperdrive upon commit.
 
-# svelte app
+The contained github action will build and then publish to hyper://e89224ea508fedaa196396a4b8f326da5e0e9e4cc34ddb5e382872fbb020aaee
 
-This is a project template for [Svelte](https://svelte.dev) apps. It lives at https://github.com/sveltejs/template.
+We will use:
 
-To create a new project based on this template using [degit](https://github.com/Rich-Harris/degit):
+ - svelte repl / https://svelte.dev/repl - to bootstrap our app
+ - hyperdrive-publisher - https://github.com/RangerMauve/hyperdrive-publisher - to create / update our hyperdrive
+ - dat-store - https://github.com/datproject/dat-store - to peer/pin our hyperdrive
+ - beakerbrowser - https://beakerbrowser.com - to view our hyperdrive & app
 
-```bash
-npx degit sveltejs/template svelte-app
-cd svelte-app
-```
+## Step 0: Setting up dat-store
 
-*Note that you will need to have [Node.js](https://nodejs.org) installed.*
+`hyperdrive-publisher` creates and updates hyperdrives, but you will need to persist the drive in at least one peer.
 
+I recommend using [dat-store](https://github.com/datproject/dat-store) on a server (raspberry pi or tiny cloud vm).
 
-## Get started
+I'm running my instance of `dat-store` on a google cloud vm with the neccessary udp ports exposed
 
-Install the dependencies...
+## Step 1: Create a new hyperdrive
 
-```bash
-cd svelte-app
-npm install
-```
+To create a hyperdrive that you will publish to using github actions, you will run the command `hyperdrive-publisher create` (either on your local system or a remote server).
 
-...then start [Rollup](https://rollupjs.org):
+    $ hyperdrive-publisher create
+    Seed:
+    c343220bd25b2c88cf313f349761b8347bd31c3002ba123d29b88d4ea755eff5
+    URL:
+    hyper://792f244134c0956c6ff26d1de88cff0a793cf52561ec0e2fd526e1e48d23bc76
+    Initializing Hyperdrive
+    Please add this URL to a pinning service like dat-store to continue 
+   
+I then go to my cloud instance and add that hyper url to `dat-store` peering list:
 
-```bash
-npm run dev
-```
+    node bin.js add hyper://792f244134c0956c6ff26d1de88cff0a793cf52561ec0e2fd526e1e48d23bc76
 
-Navigate to [localhost:5000](http://localhost:5000). You should see your app running. Edit a component file in `src`, save it, and reload the page to see your changes.
+Back on my local system, I see that my new hyperdrive has been peered!
 
-By default, the server will only respond to requests from localhost. To allow connections from other computers, edit the `sirv` commands in package.json to include the option `--host 0.0.0.0`.
+    Connected {
+      remoteAddress: '::ffff:10.128.0.3',
+      remoteType: 'tcp',
+      remotePublicKey: <Buffer 9b f2 8b 5e f2 2d e9 7b 62 92 e3 68 0d 1e 98 16 75 55 c1 1c f2 ba 36 15 27 ee f4 a5 e4 8a 3c 5a>
+    }
+    Waiting to sync metadata
+    Synced
+    You can sync a folder with:
+    hyperdrive-publisher sync c343220bd25b2c88cf313f349761b8347bd31c3002ba123d29b88d4ea755eff5
 
-If you're using [Visual Studio Code](https://code.visualstudio.com/) we recommend installing the official extension [Svelte for VS Code](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode). If you are using other editors you may need to install a plugin in order to get syntax highlighting and intellisense.
+At this point the hyperdrive should be accessible (from Beaker or other hyper clients) but will be empty except for an `index.json` file.
 
-## Building and running in production mode
+NOTE: you need to save the `seed`!
 
-To create an optimised version of the app:
+## Step 2: publishing to hyperdrive via github actions
 
-```bash
-npm run build
-```
+We can create a new github repository and add an action by copying [publish.yml from RangerMauve's example](https://github.com/RangerMauve/hyperdrive-publisher-example/blob/default/.github/workflows/publish.yml)
 
-You can run the newly built app with `npm run start`. This uses [sirv](https://github.com/lukeed/sirv), which is included in your package.json's `dependencies` so that the app will work when you deploy to platforms like [Heroku](https://heroku.com).
+By default the sample publishes all the files from a checkout of the git repository.  To publish only the generated archive, make a small change to the action by adding `public/`" to end of the line:
 
+    - name: Run Publisher
+      run: npx hyperdrive-publisher sync ${{ secrets.PUBLISHER_KEY }} public/
 
-## Single-page app mode
+Additionally on github you will need to go to the repository settings and create a secret called `PUBLISHER_KEY` and paste in the `seed` that was provided in Step 1.
 
-By default, sirv will only respond to requests that match files in `public`. This is to maximise compatibility with static fileservers, allowing you to deploy your app anywhere.
+## Step 3: Svelte App
 
-If you're building a single-page app (SPA) with multiple routes, sirv needs to be able to respond to requests for *any* path. You can make it so by editing the `"start"` command in package.json:
+This is the simplest svelte app, which was created by going to https://svelte.dev/repl and changing name to `svelte` then clicking download.
 
-```js
-"start": "sirv public --single"
-```
+Place the downloaded files in the root of the git repository, then we must add a step to install the dependencies and compile the svelte app.
 
-## Using TypeScript
+Adding the following steps to the action before the hyperdrive-publisher step:
 
-This template comes with a script to set up a TypeScript development environment, you can run it immediately after cloning the template with:
+    - name: install app deps
+      run: npm i
+    - name: compile app
+      run: npm run build
 
-```bash
-node scripts/setupTypeScript.js
-```
-
-Or remove the script via:
-
-```bash
-rm scripts/setupTypeScript.js
-```
-
-## Deploying to the web
-
-### With [Vercel](https://vercel.com)
-
-Install `vercel` if you haven't already:
-
-```bash
-npm install -g vercel
-```
-
-Then, from within your project folder:
-
-```bash
-cd public
-vercel deploy --name my-project
-```
-
-### With [surge](https://surge.sh/)
-
-Install `surge` if you haven't already:
-
-```bash
-npm install -g surge
-```
-
-Then, from within your project folder:
-
-```bash
-npm run build
-surge public my-project.surge.sh
-```
+At this point pushing to github should trigger the action.  Seconds later you should see the completed application in your hyper url in Beaker!
