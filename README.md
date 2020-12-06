@@ -17,7 +17,17 @@ We will use:
 
 I recommend using [dat-store](https://github.com/datproject/dat-store) on a server (raspberry pi or tiny cloud vm).
 
-I'm running my instance of `dat-store` on a google cloud vm with the neccessary udp ports exposed
+The hole punching p2p functionality of hyper doesn't work well for me, so I find exposing `dat-store` peering ports directly on the web helps a lot.
+
+I'm running my instance of `dat-store` on a google cloud vm:
+
+    Firewall Rules:
+
+      Source filters
+        IP ranges            0.0.0.0/0
+        Protocols and ports   
+                             tcp:3282
+                             udp:3282
 
 ## Step 1: Create a new hyperdrive
 
